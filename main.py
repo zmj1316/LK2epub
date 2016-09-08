@@ -78,8 +78,8 @@ def extract_pic(s):
     except Exception:
         print 'picture not loaded'
         return ''
-    if pic.startswith('/'):
-        pic = 'www.lightnovel.cn' + pic
+    if not pic.startswith('http'):
+        pic = 'https://www.lightnovel.cn/' + pic
     Imgs.append(pic.split('/')[-1])
     download_pic(pic)
     if book.coverimg is None:
