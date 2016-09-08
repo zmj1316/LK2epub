@@ -9,6 +9,7 @@ import re
 import uuid
 from bs4 import BeautifulSoup
 from jinja2 import Environment, PackageLoader
+import Image
 
 
 
@@ -46,16 +47,23 @@ def download_pic(pic):
 
         def run(self):
             global tmp_path
-            if os.path.isfile(os.path.join(tmp_path, 'Images', pic.split('/')[-1])):
+            img_path = os.path.join(tmp_path, 'Images', pic.split('/')[-1])
+            if os.path.isfile(img_path):
                 return
             url = self.pic
             r = requests.get(url, headers=headers)
             if r.status_code != 200:
                 print pic.split('/')[-1] + 'Error ' + str(r.status_code)
                 return
-            with open(os.path.join(tmp_path, 'Images', pic.split('/')[-1]), 'wb') as f:
+            with open(img_path, 'wb') as f:
                 f.write(r.content)
             print pic.split('/')[-1] + ' downloaded'
+            im = Image.open(img_path)
+            w, h = im.size
+            if h > 1080:
+                im.thumbnail((w * h // 1080, 1080))
+                im.save(img_path,'jpeg')
+                print pic.split('/')[-1] + ' resized'
 
     t = DownloadThread(pic)
     t.setDaemon(True)
@@ -74,7 +82,6 @@ def extract_pic(s):
         pic = 'www.lightnovel.cn' + pic
     Imgs.append(pic.split('/')[-1])
     download_pic(pic)
-    print pic
     if book.coverimg is None:
         book.coverimg = pic.split('/')[-1]
     return pic.split('/')[-1]
@@ -112,7 +119,7 @@ def epub(soup):
             break
         else:
             chapter_count += 1
-    print(chapter_count)
+    print(str(chapter_count) + ' chapters')
     book.chapter_count = chapter_count
 
     contents = soup.find_all("td", {"class": "t_f"})
