@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes"?>
+<package xmlns="http://www.idpf.org/2007/opf" unique-identifier="BookId" version="2.0">
+    <metadata xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:opf="http://www.idpf.org/2007/opf">
+        <dc:identifier id="BookId" opf:scheme="UUID">urn:uuid:{{ book.uuid }}</dc:identifier>
+        <dc:title>{{ book.title }}</dc:title>
+        <dc:creator opf:file-as="{{ book.author }}" opf:role="aut">{{ book.author }}</dc:creator>
+        <dc:language>zh</dc:language>
+        <dc:source>http://www.lightnovel.cn</dc:source>
+        <dc:description>{{ book.introduction }}</dc:description>
+        <dc:date>{{ book.date }}</dc:date>
+        <dc:publisher>linovel</dc:publisher>
+        <meta content="img{{ book.coverimg }}" name="cover" />
+        <!-- <meta content="" name="cover" /> -->
+    </metadata>
+    <manifest>
+        <item href="toc.ncx" id="ncx" media-type="application/x-dtbncx+xml" />
+        <item href="Text/Cover.html" id="Cover.html" media-type="application/xhtml+xml" />
+        <item href="Text/Contents.html" id="Contents.html" media-type="application/xhtml+xml" />
+        <item href="Text/Title.html" id="Title.html" media-type="application/xhtml+xml" />
+        {% for i in Texts %}
+        <item href="Text/{{ i }}" id="{{ i }}" media-type="application/xhtml+xml" />
+        {% endfor %}
+        {% for i in Imgs %}
+        <item href="Images/{{ i }}" id="img{{ i }}" media-type="image/jpeg" />
+        {% endfor %}
+        <item href="Styles/style.css" id="style.css" media-type="text/css" />
+    </manifest>
+    <spine toc="ncx">
+        <itemref idref="Cover.html" />
+        <itemref idref="Title.html" />
+        <itemref idref="Contents.html" />
+        {% for i in book.Chapters%}
+        <itemref idref="{{ i.filename }}" />
+        {% endfor %}
+    </spine>
+    <guide>
+        <reference href="Text/Contents.html" title="Table Of Contents" type="toc" />
+        <reference href="Text/Cover.html" title="Cover" type="cover" />
+    </guide>
+</package>
