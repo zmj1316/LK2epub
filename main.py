@@ -9,7 +9,7 @@ import re
 import uuid
 from bs4 import BeautifulSoup
 from jinja2 import Environment, PackageLoader
-import Image
+from PIL import Image
 
 
 
@@ -36,7 +36,9 @@ class Book(object):
 def remove_edit_mark(s):
     s1 = re.sub(r'''<i class="pstatus">.+?</i><br/>''', " ", s)
     s2 = re.sub(r'''<td class="t_f" .+?>''', " ", s1)
-    return re.sub(r"</td>", " ", s2)
+    s3 = re.sub(r"</td>", " ", s2)
+    s4 = re.subn(r"</?a.*>",'',s3)[0]
+    return s4
 
 
 def download_pic(pic):
@@ -79,7 +81,10 @@ def extract_pic(s):
         print 'picture not loaded'
         return ''
     if not pic.startswith('http'):
-        pic = 'https://www.lightnovel.cn/' + pic
+        if headers['referer'].startswith('https'):
+            pic = 'https://www.lightnovel.cn/' + pic
+        else:
+            pic = 'http://www.lightnovel.cn/' + pic
     Imgs.append(pic.split('/')[-1])
     download_pic(pic)
     if book.coverimg is None:
@@ -126,7 +131,7 @@ def epub(soup):
     for i in xrange(chapter_count):
         for ig in contents[i].find_all("img"):
             new_tag = soup.new_tag('div')
-            new_tag.attrs['class'] = 'illust'
+            new_tag.attrs['class'] = 'duokan-image-single center'
             new_tag.append(soup.new_tag(
                 'img', src='../Images/' + extract_pic(ig)))
             ig.replace_with(new_tag)
@@ -203,7 +208,9 @@ headers = {
 }
 
 if __name__ == '__main__':
-
+    if not os.path.isfile('LK.cookie'):
+        print 'Cookie is needed for login'
+        exit(1)
     with open('LK.cookie') as cookie_file:
         headers['cookie'] = cookie_file.readline()[:-1]
 
@@ -212,11 +219,11 @@ if __name__ == '__main__':
 
     thread_url = raw_input('Input post url')
     if len(thread_url) < 5:
-        thread_url = 'https://www.lightnovel.cn/thread-861998-1-1.html'
+        thread_url = 'http://www.lightnovel.cn/thread-861998-1-1.html'
     headers['referer'] = thread_url
     r = requests.get(thread_url, headers=headers)
     if r.status_code != 200:
-        print 'NET ERROR ' + r.status_code
+        print 'NET ERROR ' + str(r.status_code)
         exit(1)
     soup = BeautifulSoup(r.text, "html.parser")
     epub(soup)

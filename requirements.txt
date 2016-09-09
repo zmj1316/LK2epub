@@ -1,4 +1,4 @@
 jinja2
 requests
 bs4
-PIL
+pillow

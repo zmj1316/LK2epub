@@ -27,10 +27,10 @@
     </manifest>
     <spine toc="ncx">
         <itemref idref="Cover.html" />
-        <itemref idref="Title.html" />
-        <itemref idref="Contents.html" />
+        <itemref idref="Title.html"/>
+        <itemref idref="Contents.html"/>
         {% for i in book.Chapters%}
-        <itemref idref="{{ i.filename }}" />
+        <itemref idref="{{ i.filename }}"/>
         {% endfor %}
     </spine>
     <guide>
