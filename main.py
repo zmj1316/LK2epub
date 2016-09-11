@@ -110,11 +110,12 @@ def epub(soup):
         os.mkdir('Images')
 
     tmp_path = os.getcwd()
+
     def filename_escape(s):
-        return re.subn(r'[/\\:\*\?\"<>\|]', '', s, 0)[0]
+        return re.subn(r'[/\\:\*\?\"<>\|\.]', '', s, 0)[0]
 
     book = Book()
-    book.title = soup.find(id="thread_subject").string
+    book.title = filename_escape(soup.find(id="thread_subject").string)
     print book.title
     reps = soup.find_all("a", {"class": "xw1"})
     chapter_count = 0
