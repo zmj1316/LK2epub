@@ -62,8 +62,8 @@ def download_pic(pic):
             print pic.split('/')[-1] + ' downloaded'
             im = Image.open(img_path)
             w, h = im.size
-            if h > 1080:
-                im.thumbnail((w * h // 1080, 1080))
+            if h > 1920:
+                im.thumbnail((w * h // 1920, 1920))
                 im.save(img_path,'jpeg')
                 print pic.split('/')[-1] + ' resized'
 
@@ -77,14 +77,15 @@ def extract_pic(s):
     global book
     try:
         pic = s.get('file')
+        if not pic.startswith('http'):
+            if headers['referer'].startswith('https'):
+                pic = 'https://www.lightnovel.cn/' + pic
+            else:
+                pic = 'http://www.lightnovel.cn/' + pic
     except Exception:
         print 'picture not loaded'
         return ''
-    if not pic.startswith('http'):
-        if headers['referer'].startswith('https'):
-            pic = 'https://www.lightnovel.cn/' + pic
-        else:
-            pic = 'http://www.lightnovel.cn/' + pic
+
     Imgs.append(pic.split('/')[-1])
     download_pic(pic)
     if book.coverimg is None:
@@ -227,5 +228,13 @@ if __name__ == '__main__':
         print 'NET ERROR ' + str(r.status_code)
         exit(1)
     soup = BeautifulSoup(r.text, "html.parser")
-    epub(soup)
+    try:
+        epub(soup)
+    except Exception as e:
+        open("res.html","w").write(r.text)
+        raise
+    else:
+        pass
+    finally:
+        pass
     print 'Done!'
