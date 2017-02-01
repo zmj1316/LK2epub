@@ -49,7 +49,7 @@ def download_pic(pic):
 
         def run(self):
             global tmp_path
-            img_path = os.path.join(tmp_path, 'Images', pic.split('/')[-1])
+            img_path = os.path.join(tmp_path, 'Images', pic.split('/')[-1].split('?')[0])
             if os.path.isfile(img_path):
                 return
             url = self.pic
@@ -59,13 +59,13 @@ def download_pic(pic):
                 return
             with open(img_path, 'wb') as f:
                 f.write(r.content)
-            print pic.split('/')[-1] + ' downloaded'
+            print img_path + ' downloaded'
             im = Image.open(img_path)
             w, h = im.size
             if h > 1920:
                 im.thumbnail((w * h // 1920, 1920))
                 im.save(img_path,'jpeg')
-                print pic.split('/')[-1] + ' resized'
+                print img_path + ' resized'
 
     t = DownloadThread(pic)
     t.setDaemon(True)
@@ -89,8 +89,8 @@ def extract_pic(s):
     Imgs.append(pic.split('/')[-1])
     download_pic(pic)
     if book.coverimg is None:
-        book.coverimg = pic.split('/')[-1]
-    return pic.split('/')[-1]
+        book.coverimg = pic.split('/')[-1].split('?')[0]
+    return pic.split('/')[-1].split('?')[0]
 
 
 def epub(soup):
@@ -227,7 +227,17 @@ if __name__ == '__main__':
     if r.status_code != 200:
         print 'NET ERROR ' + str(r.status_code)
         exit(1)
-    soup = BeautifulSoup(r.text, "html.parser")
+    text = r.text
+
+    if thread_url[-8] == "1":
+        thread_p2 = thread_url[0:-8] + "2" + thread_url[-7ep:]
+        r2 = requests.get(thread_p2, headers=headers)
+        if r2.status_code != 200:
+            print 'NET ERROR ' + str(r2.status_code) + thread_p2
+        else:
+            text += r2.text
+
+    soup = BeautifulSoup(text, "html.parser")
     try:
         epub(soup)
     except Exception as e:
