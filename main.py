@@ -230,7 +230,7 @@ if __name__ == '__main__':
     text = r.text
 
     if thread_url[-8] == "1":
-        thread_p2 = thread_url[0:-8] + "2" + thread_url[-7ep:]
+        thread_p2 = thread_url[0:-8] + "2" + thread_url[-7:]
         r2 = requests.get(thread_p2, headers=headers)
         if r2.status_code != 200:
             print 'NET ERROR ' + str(r2.status_code) + thread_p2
