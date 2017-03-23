@@ -40,6 +40,7 @@ def remove_edit_mark(s):
     s4 = re.subn(r"</?a.*>",'',s3)[0]
     return s4
 
+import md5
 
 def download_pic(pic):
     class DownloadThread(threading.Thread):
@@ -50,6 +51,10 @@ def download_pic(pic):
         def run(self):
             global tmp_path
             img_path = os.path.join(tmp_path, 'Images', pic.split('/')[-1].split('?')[0])
+            if '.' in img_path[-4:-2]:
+                md5er = md5.new()
+                md5er.update(pic)
+                img_path = os.path.join(tmp_path, 'Images', md5er.hexdigest() + '.jpg')
             if os.path.isfile(img_path):
                 return
             url = self.pic
@@ -62,8 +67,8 @@ def download_pic(pic):
             print img_path + ' downloaded'
             im = Image.open(img_path)
             w, h = im.size
-            if h > 1920:
-                im.thumbnail((w * h // 1920, 1920))
+            if h > 2200 or img_path.endswith('.png'):
+                im.thumbnail((w * h // 2200, 2200))
                 im.save(img_path,'jpeg')
                 print img_path + ' resized'
 
@@ -83,14 +88,20 @@ def extract_pic(s):
             else:
                 pic = 'http://www.lightnovel.cn/' + pic
     except Exception:
-        print 'picture not loaded'
+        print 'picture extract error'
+        print s
         return ''
 
-    Imgs.append(pic.split('/')[-1])
     download_pic(pic)
+    image_name = pic.split('/')[-1].split('?')[0]
+    if '.' in image_name[-4:-2]:
+        md5er = md5.new()
+        md5er.update(pic)
+        image_name = md5er.hexdigest() + '.jpg'
+    Imgs.append(image_name)
     if book.coverimg is None:
-        book.coverimg = pic.split('/')[-1].split('?')[0]
-    return pic.split('/')[-1].split('?')[0]
+        book.coverimg = image_name
+    return image_name
 
 
 def epub(soup):
@@ -122,23 +133,44 @@ def epub(soup):
     chapter_count = 0
     i0 = reps[0]
     for i in reps:
-        if i0 != i:
-            break
-        else:
-            chapter_count += 1
+        if i.parent['class'][0] == u'authi':
+            if i0 != i:
+                break
+            else:
+                chapter_count += 1
     print(str(chapter_count) + ' chapters')
     book.chapter_count = chapter_count
 
     contents = soup.find_all("td", {"class": "t_f"})
+    raw_contents = [None] * len(contents)
     for i in xrange(chapter_count):
+        raw_contents[i] = str(contents[i])
+        cp = contents[i].parent.parent.parent
+        pattl = None
+        if cp['class'][0] == u't_fsz':
+            patts = cp.find_all(class_ = "pattl")
+            if len(patts) > 0:
+                pattl = patts[0]
+
+
         for ig in contents[i].find_all("img"):
             new_tag = soup.new_tag('div')
             new_tag.attrs['class'] = 'duokan-image-single center'
             new_tag.append(soup.new_tag(
                 'img', src='../Images/' + extract_pic(ig)))
             ig.replace_with(new_tag)
+
+        if pattl:
+            for ig in pattl.find_all("img"):
+                new_tag = soup.new_tag('div')
+                new_tag.attrs['class'] = 'duokan-image-single center'
+                new_tag.append(soup.new_tag(
+                    'img', src='../Images/' + extract_pic(ig)))
+                ig.replace_with(new_tag)
+            raw_contents[i] += str(pattl)
+
         book.Chapters.append(
-            Chapter(i, str(i), 'chapter' + str(i) + '.html', remove_edit_mark(str(contents[i]))))
+            Chapter(i, str(i), 'chapter' + str(i) + '.html', remove_edit_mark(raw_contents[i])))
         # 生成页面
         t_chapter = env.get_template('Chapter.html')
         f = open(os.path.join('Text', book.Chapters[i].filename), 'w')
