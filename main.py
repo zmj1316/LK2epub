@@ -67,10 +67,13 @@ def download_pic(pic):
             print img_path + ' downloaded'
             im = Image.open(img_path)
             w, h = im.size
-            if h > 2200 or img_path.endswith('.png'):
-                im.thumbnail((w * h // 2200, 2200))
+            if h > 1920 :
+                im.thumbnail((w * h // 1920, 1920))
                 im.save(img_path,'jpeg')
                 print img_path + ' resized'
+            elif img_path.endswith('.png'):
+                im.save(img_path,'jpeg')
+                print img_path + ' reformated'
 
     t = DownloadThread(pic)
     t.setDaemon(True)
@@ -144,7 +147,6 @@ def epub(soup):
     contents = soup.find_all("td", {"class": "t_f"})
     raw_contents = [None] * len(contents)
     for i in xrange(chapter_count):
-        raw_contents[i] = str(contents[i])
         cp = contents[i].parent.parent.parent
         pattl = None
         if cp['class'][0] == u't_fsz':
@@ -159,6 +161,7 @@ def epub(soup):
             new_tag.append(soup.new_tag(
                 'img', src='../Images/' + extract_pic(ig)))
             ig.replace_with(new_tag)
+        raw_contents[i] = str(contents[i])
 
         if pattl:
             for ig in pattl.find_all("img"):
