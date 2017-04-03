@@ -50,11 +50,12 @@ def download_pic(pic):
 
         def run(self):
             global tmp_path
-            img_path = os.path.join(tmp_path, 'Images', pic.split('/')[-1].split('?')[0])
-            if '.' in img_path[-4:-2]:
-                md5er = md5.new()
-                md5er.update(pic)
-                img_path = os.path.join(tmp_path, 'Images', md5er.hexdigest() + '.jpg')
+            # img_path = os.path.join(tmp_path, 'Images', pic.split('/')[-1].split('?')[0])
+            # if '.' in img_path[-4:-2]:
+            md5er = md5.new()
+            md5er.update(pic)
+            img_path = os.path.join(tmp_path, 'Images', md5er.hexdigest() + '.jpg')
+            
             if os.path.isfile(img_path):
                 return
             url = self.pic
@@ -81,9 +82,11 @@ def download_pic(pic):
     t.start()
 
 def extract_pic(s):
-    # print(s)
+    # 根据图片 URL 进行下载和重命名
+
     global book
     try:
+        # 处理URL
         pic = s.get('file')
         if not pic.startswith('http'):
             if headers['referer'].startswith('https'):
@@ -96,14 +99,20 @@ def extract_pic(s):
         return ''
 
     download_pic(pic)
-    image_name = pic.split('/')[-1].split('?')[0]
-    if '.' in image_name[-4:-2]:
-        md5er = md5.new()
-        md5er.update(pic)
-        image_name = md5er.hexdigest() + '.jpg'
+    # image_name = pic.split('/')[-1].split('?')[0]
+
+    # 懒得提取 URL 里面的图片名字，直接 md5 了
+
+    md5er = md5.new()
+    md5er.update(pic)
+    image_name = md5er.hexdigest() + '.jpg'
     Imgs.append(image_name)
+
+    # 第一个图当封面
     if book.coverimg is None:
         book.coverimg = image_name
+
+    # 返回重命名后的文件名用在电子书里面
     return image_name
 
 
@@ -130,23 +139,32 @@ def epub(soup):
         return re.subn(r'[/\\:\*\?\"<>\|\.]', '', s, 0)[0]
 
     book = Book()
+    # 书名为标题，去除特殊字符
     book.title = filename_escape(soup.find(id="thread_subject").string)
     print book.title
+
+    # 提取所有帖子的用户
     reps = soup.find_all("a", {"class": "xw1"})
     chapter_count = 0
     i0 = reps[0]
+
+    # 判断是否为 LZ，只提取LZ发布的
     for i in reps:
         if i.parent['class'][0] == u'authi':
             if i0 != i:
                 break
             else:
                 chapter_count += 1
+
     print(str(chapter_count) + ' chapters')
     book.chapter_count = chapter_count
 
+    # 帖子内容
     contents = soup.find_all("td", {"class": "t_f"})
     raw_contents = [None] * len(contents)
     for i in xrange(chapter_count):
+
+        # pattl 是附件部分，有的作者会把图片放这里
         cp = contents[i].parent.parent.parent
         pattl = None
         if cp['class'][0] == u't_fsz':
@@ -154,7 +172,7 @@ def epub(soup):
             if len(patts) > 0:
                 pattl = patts[0]
 
-
+        # 将帖子图片替换成电子书格式
         for ig in contents[i].find_all("img"):
             new_tag = soup.new_tag('div')
             new_tag.attrs['class'] = 'duokan-image-single center'
@@ -163,6 +181,7 @@ def epub(soup):
             ig.replace_with(new_tag)
         raw_contents[i] = str(contents[i])
 
+        # 增加 pattl 附件内容
         if pattl:
             for ig in pattl.find_all("img"):
                 new_tag = soup.new_tag('div')
@@ -172,14 +191,18 @@ def epub(soup):
                 ig.replace_with(new_tag)
             raw_contents[i] += str(pattl)
 
+
         book.Chapters.append(
             Chapter(i, str(i), 'chapter' + str(i) + '.html', remove_edit_mark(raw_contents[i])))
+
         # 生成页面
         t_chapter = env.get_template('Chapter.html')
         f = open(os.path.join('Text', book.Chapters[i].filename), 'w')
         f.write(t_chapter.render(chapter=book.Chapters[i]))
         f.close()
         Texts.append(book.Chapters[i].filename)
+
+    # 生成 epub
     # toc.ncx
     t_toc = env.get_template('toc.ncx')
 
@@ -207,8 +230,12 @@ def epub(soup):
     t_title = env.get_template('Title.html')
     with open(os.path.join('Text', 'Title.html'), 'w') as f:
         f.write(t_title.render(book_name=book.title))
+
+    # 等待图片下载
     for i in threads:
         i.join()
+
+    # 打包
     with zipfile.ZipFile('../' + book.title + '.epub', 'w', zipfile.ZIP_DEFLATED) as z:
         z.write(os.path.join(basepath, 'files' + os.sep + 'mimetype'),
                 'mimetype', compress_type=zipfile.ZIP_STORED)
@@ -245,6 +272,7 @@ headers = {
 }
 
 if __name__ == '__main__':
+#读取 cookie 以加载图片
     if not os.path.isfile('LK.cookie'):
         print 'Cookie is needed for login'
         exit(1)
@@ -256,6 +284,7 @@ if __name__ == '__main__':
 
     thread_url = raw_input('Input post url')
     if len(thread_url) < 5:
+# 如果需要下载多页帖子，需要这种格式方便换页
         thread_url = 'http://www.lightnovel.cn/thread-861998-1-1.html'
     headers['referer'] = thread_url
     r = requests.get(thread_url, headers=headers)
@@ -264,6 +293,7 @@ if __name__ == '__main__':
         exit(1)
     text = r.text
 
+# 换页，这里只做两页，应该够了
     if thread_url[-8] == "1":
         thread_p2 = thread_url[0:-8] + "2" + thread_url[-7:]
         r2 = requests.get(thread_p2, headers=headers)
@@ -271,7 +301,7 @@ if __name__ == '__main__':
             print 'NET ERROR ' + str(r2.status_code) + thread_p2
         else:
             text += r2.text
-
+# 开始处理
     soup = BeautifulSoup(text, "html.parser")
     try:
         epub(soup)
