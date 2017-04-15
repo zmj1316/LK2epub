@@ -49,7 +49,7 @@ def download_pic(pic):
             self.pic = p
 
         def run(self):
-            global tmp_path
+            global tmp_path,book
             # img_path = os.path.join(tmp_path, 'Images', pic.split('/')[-1].split('?')[0])
             # if '.' in img_path[-4:-2]:
             md5er = md5.new()
@@ -59,7 +59,11 @@ def download_pic(pic):
             if os.path.isfile(img_path):
                 return
             url = self.pic
-            r = requests.get(url, headers=headers)
+            try:
+                r = requests.get(url, headers=headers)
+            except:
+                print url + ' load error'
+                return
             if r.status_code != 200:
                 print pic.split('/')[-1] + 'Error ' + str(r.status_code)
                 return
@@ -72,9 +76,14 @@ def download_pic(pic):
                 im.thumbnail((w * h // 1920, 1920))
                 im.save(img_path,'jpeg')
                 print img_path + ' resized'
-            elif img_path.endswith('.png'):
-                im.save(img_path,'jpeg')
-                print img_path + ' reformated'
+
+            im.save(img_path,'jpeg')
+
+            if 1080 > w > h and book.coverimg == md5er.hexdigest() + '.jpg':
+                print 'Error cover ' + book.coverimg
+                book.coverimg = Imgs[1]
+                print 'New cover ' + book.coverimg
+
 
     t = DownloadThread(pic)
     t.setDaemon(True)
@@ -202,6 +211,9 @@ def epub(soup):
         f.close()
         Texts.append(book.Chapters[i].filename)
 
+    # 等待图片下载
+    for i in threads:
+        i.join()
     # 生成 epub
     # toc.ncx
     t_toc = env.get_template('toc.ncx')
@@ -231,9 +243,7 @@ def epub(soup):
     with open(os.path.join('Text', 'Title.html'), 'w') as f:
         f.write(t_title.render(book_name=book.title))
 
-    # 等待图片下载
-    for i in threads:
-        i.join()
+
 
     # 打包
     with zipfile.ZipFile('../' + book.title + '.epub', 'w', zipfile.ZIP_DEFLATED) as z:
