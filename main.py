@@ -60,7 +60,7 @@ def download_pic(pic):
                 return
             url = self.pic
             try:
-                r = requests.get(url, headers=headers)
+                r = requests.get(url, headers=image_headers)
             except:
                 print url + ' load error'
                 return
@@ -278,6 +278,16 @@ headers = {
                    " Chrome/48.0.2564.109 Safari/537.36"),
     'accept': ("text/html,application/xhtml+xml,application/xml;q=0.9"
                ",image/webp,*/*;q=0.8"),
+    'cookie': ''
+}
+
+image_headers = {
+    'dnt': '1',
+    'accept-encoding': 'gzip, deflate, sdch',
+    'user-agent': ("Mozilla/5.0 (Windows NT 6.1; Win64; x64)"
+                   " AppleWebKit/537.36 (KHTML, like Gecko)"
+                   " Chrome/48.0.2564.109 Safari/537.36"),
+    'accept': (",image/webp,*/*;q=0.8"),
     'cookie': ''
 }
 
