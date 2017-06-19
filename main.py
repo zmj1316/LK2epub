@@ -10,7 +10,10 @@ import uuid
 from bs4 import BeautifulSoup
 from jinja2 import Environment, PackageLoader
 from PIL import Image
+import opencc
+cc = opencc.OpenCC('t2s')
 
+isTCH = False
 
 
 class Chapter(object):
@@ -60,15 +63,20 @@ def download_pic(pic):
                 return
             url = self.pic
             try:
-                r = requests.get(url, headers=image_headers)
+
+                r = requests.get(url, headers=image_headers,timeout=30)
             except:
                 print url + ' load error'
                 return
             if r.status_code != 200:
                 print pic.split('/')[-1] + 'Error ' + str(r.status_code)
                 return
+            # if len(r.content) < 100:
+            # 	print pic.split('/')[-1] + 'Size Too Small!'
+            # 	return
             with open(img_path, 'wb') as f:
                 f.write(r.content)
+        	# print 'get ' + url
             print img_path + ' downloaded'
             im = Image.open(img_path)
             w, h = im.size
@@ -77,9 +85,9 @@ def download_pic(pic):
                 im.save(img_path,'jpeg')
                 print img_path + ' resized'
 
-            im.save(img_path,'jpeg')
+            # im.save(img_path,'jpeg')
 
-            if 1080 > w > h and book.coverimg == md5er.hexdigest() + '.jpg':
+            if 900 > w > h and book.coverimg == md5er.hexdigest() + '.jpg':
                 print 'Error cover ' + book.coverimg
                 book.coverimg = Imgs[1]
                 print 'New cover ' + book.coverimg
@@ -126,7 +134,7 @@ def extract_pic(s):
 
 
 def epub(soup):
-    global tmp_path, book, threads
+    global tmp_path, book, threads, isTCH
     basepath = os.getcwd() + os.sep + 'epub'
     # 准备目录
     if os.path.isdir('tmp'):
@@ -150,7 +158,10 @@ def epub(soup):
     book = Book()
     # 书名为标题，去除特殊字符
     book.title = filename_escape(soup.find(id="thread_subject").string)
-    print book.title
+    # print book.title
+    if '繁' in book.title:
+    	print 'triditional chinese detected'
+    	isTCH = True
 
     # 提取所有帖子的用户
     reps = soup.find_all("a", {"class": "xw1"})
@@ -200,9 +211,11 @@ def epub(soup):
                 ig.replace_with(new_tag)
             raw_contents[i] += str(pattl)
 
-
+        if isTCH:
+        	# print raw_contents[i]
+        	raw_contents[i] = cc.convert(raw_contents[i])
         book.Chapters.append(
-            Chapter(i, str(i), 'chapter' + str(i) + '.html', remove_edit_mark(raw_contents[i])))
+            Chapter(i, str(i), 'chapter' + str(i) + '.html', (remove_edit_mark(raw_contents[i]))))
 
         # 生成页面
         t_chapter = env.get_template('Chapter.html')
