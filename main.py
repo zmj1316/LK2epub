@@ -136,21 +136,6 @@ def extract_pic(s):
 def epub(soup):
     global tmp_path, book, threads, isTCH
     basepath = os.getcwd() + os.sep + 'epub'
-    # 准备目录
-    if os.path.isdir('tmp'):
-        c = raw_input('tmp dir exists, continue?(N) Y|N')
-        if c != 'Y' and c != 'y':
-            raw_input('Please delete tmp dir before retry')
-            exit(1)
-        else:
-            os.chdir('tmp')
-    else:
-        os.mkdir('tmp')
-        os.chdir('tmp')
-        os.mkdir('Text')
-        os.mkdir('Images')
-
-    tmp_path = os.getcwd()
 
     def filename_escape(s):
         return re.subn(r'[/\\:\*\?\"<>\|\.]', '', s, 0)[0]
@@ -158,6 +143,23 @@ def epub(soup):
     book = Book()
     # 书名为标题，去除特殊字符
     book.title = filename_escape(soup.find(id="thread_subject").string)
+
+        # 准备目录
+    if os.path.isdir(book.title):
+        c = raw_input('tmp dir exists, continue?(N) Y|N')
+        if c != 'Y' and c != 'y':
+            raw_input('Please delete tmp dir before retry')
+            exit(1)
+        else:
+            os.chdir('tmp')
+    else:
+        os.mkdir(book.title)
+        os.chdir(book.title)
+        os.mkdir('Text')
+        os.mkdir('Images')
+
+    tmp_path = os.getcwd()
+
     # print book.title
     if '繁' in book.title:
     	print 'triditional chinese detected'
@@ -273,8 +275,8 @@ def epub(soup):
     # shutil.copy(book.title + '.epub', '../')
     os.chdir('../')
     # shutil.rmtree(os.path.join(basepath, 'tmp'))
-    if os.path.isdir('tmp'):
-        shutil.rmtree('tmp')
+    if os.path.isdir(book.title):
+        shutil.rmtree(book.title)
 
 env = Environment(loader=PackageLoader('epub', 'templates'))
 Texts = []
