@@ -72,15 +72,17 @@ def download_pic(pic):
                 print pic.split('/')[-1] + 'Error ' + str(r.status_code)
                 return
             # if len(r.content) < 100:
-            # 	print pic.split('/')[-1] + 'Size Too Small!'
-            # 	return
+            #   print pic.split('/')[-1] + 'Size Too Small!'
+            #   return
             with open(img_path, 'wb') as f:
                 f.write(r.content)
-        	# print 'get ' + url
+            # print 'get ' + url
             print img_path + ' downloaded'
             im = Image.open(img_path)
             w, h = im.size
-            if h > 1920 :
+            if len(im.split()) == 4:
+                print 'png detected'
+            elif h > 1920 :
                 im.thumbnail((w * h // 1920, 1920))
                 im.save(img_path,'jpeg')
                 print img_path + ' resized'
@@ -151,7 +153,7 @@ def epub(soup):
             raw_input('Please delete tmp dir before retry')
             exit(1)
         else:
-            os.chdir('tmp')
+            os.chdir(book.title)
     else:
         os.mkdir(book.title)
         os.chdir(book.title)
@@ -162,8 +164,8 @@ def epub(soup):
 
     # print book.title
     if '繁' in book.title:
-    	print 'triditional chinese detected'
-    	isTCH = True
+        print 'triditional chinese detected'
+        isTCH = True
 
     # 提取所有帖子的用户
     reps = soup.find_all("a", {"class": "xw1"})
@@ -214,8 +216,12 @@ def epub(soup):
             raw_contents[i] += str(pattl)
 
         if isTCH:
-        	# print raw_contents[i]
-        	raw_contents[i] = cc.convert(raw_contents[i])
+            # print raw_contents[i]
+            try:
+                raw_contents[i] = cc.convert(raw_contents[i])
+            except Exception as e:
+                with open('error.log','a') as o:
+                    o.write(raw_contents[i])
         book.Chapters.append(
             Chapter(i, str(i), 'chapter' + str(i) + '.html', (remove_edit_mark(raw_contents[i]))))
 
