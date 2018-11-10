@@ -64,7 +64,7 @@ def download_pic(pic):
             url = self.pic
             try:
 
-                r = requests.get(url, headers=image_headers,timeout=30)
+                r = requests.get(url, headers=image_headers,timeout=30,verify=False)
             except:
                 print url + ' load error'
                 return
@@ -328,7 +328,7 @@ if __name__ == '__main__':
 # 如果需要下载多页帖子，需要这种格式方便换页
         thread_url = 'http://www.lightnovel.cn/thread-861998-1-1.html'
     headers['referer'] = thread_url
-    r = requests.get(thread_url, headers=headers)
+    r = requests.get(thread_url, headers=headers,verify=False)
     if r.status_code != 200:
         print 'NET ERROR ' + str(r.status_code)
         exit(1)
@@ -337,7 +337,7 @@ if __name__ == '__main__':
 # 换页，这里只做两页，应该够了
     if thread_url[-8] == "1":
         thread_p2 = thread_url[0:-8] + "2" + thread_url[-7:]
-        r2 = requests.get(thread_p2, headers=headers)
+        r2 = requests.get(thread_p2, headers=headers,verify=False)
         if r2.status_code != 200:
             print 'NET ERROR ' + str(r2.status_code) + thread_p2
         else:
