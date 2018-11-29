@@ -8,3 +8,8 @@
 * requests
 * bs4
 * PIL
+* opencc-python-reimplemented
+
+## 安装依赖
+
+    pip install -r requirements.txt
