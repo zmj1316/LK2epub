@@ -77,7 +77,7 @@ def download_pic(pic):
             with open(img_path, 'wb') as f:
                 f.write(r.content)
             # print 'get ' + url
-            print img_path + ' downloaded'
+            print url + ' downloaded'
             im = Image.open(img_path)
             w, h = im.size
             if len(im.split()) == 4:
@@ -85,7 +85,7 @@ def download_pic(pic):
             elif h > 1920 :
                 im.thumbnail((w * h // 1920, 1920))
                 im.save(img_path,'jpeg')
-                print img_path + ' resized'
+                print url + ' resized'
 
             # im.save(img_path,'jpeg')
 
@@ -148,7 +148,7 @@ def epub(soup):
 
         # 准备目录
     if os.path.isdir(book.title):
-        c = raw_input('tmp dir exists, continue?(N) Y|N')
+        c = raw_input('tmp dir exists, continue?(N) Y|N').strip()
         if c != 'Y' and c != 'y':
             raw_input('Please delete tmp dir before retry')
             exit(1)
@@ -160,7 +160,7 @@ def epub(soup):
         os.mkdir('Text')
         os.mkdir('Images')
 
-    tmp_path = os.getcwd()
+    tmp_path = os.getcwdu()
 
     # print book.title
     if '繁' in book.title:
@@ -274,10 +274,10 @@ def epub(soup):
                 compress_type=zipfile.ZIP_STORED)
         z.write(os.path.join(basepath, 'files' + os.sep + 'style.css'), '/OEBPS/Styles/style.css',
                 compress_type=zipfile.ZIP_STORED)
-        for dir_path, dir_names, filenames in os.walk(os.getcwd()):
+        for dir_path, dir_names, filenames in os.walk(os.getcwdu()):
             for filename in filenames:
                 f = os.path.join(dir_path, filename)
-                z.write(f, 'OEBPS//' + f[len(os.getcwd()) + 1:])
+                z.write(f, 'OEBPS//' + f[len(os.getcwdu()) + 1:])
     # shutil.copy(book.title + '.epub', '../')
     os.chdir('../')
     # shutil.rmtree(os.path.join(basepath, 'tmp'))
@@ -323,7 +323,7 @@ if __name__ == '__main__':
     reload(sys)
     sys.setdefaultencoding('utf8')
 
-    thread_url = raw_input('Input post url')
+    thread_url = raw_input('Input post url').strip()
     if len(thread_url) < 5:
 # 如果需要下载多页帖子，需要这种格式方便换页
         thread_url = 'http://www.lightnovel.cn/thread-861998-1-1.html'
