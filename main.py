@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
+from __future__ import print_function
 import sys
-import os
+import os,io
 import shutil
 import zipfile
 import threading
@@ -11,9 +12,28 @@ from bs4 import BeautifulSoup
 from jinja2 import Environment, PackageLoader
 from PIL import Image
 import opencc
+import hashlib
+
+
 cc = opencc.OpenCC('t2s')
 
 isTCH = False
+
+if sys.version > '3':
+    def raw_input(ss):
+        return input(ss)
+
+    sys.stdout = io.TextIOWrapper(sys.stdout.detach(), encoding='utf-8')
+    sys.stderr = io.TextIOWrapper(sys.stderr.detach(), encoding='utf-8')
+
+
+def md5_hash(ss):
+    md5er = hashlib.md5()
+    if sys.version < '3':
+        md5er.update(ss)
+    else:
+        md5er.update(ss.encode())
+    return md5er.hexdigest()
 
 
 class Chapter(object):
@@ -43,8 +63,6 @@ def remove_edit_mark(s):
     s4 = re.subn(r"</?a.*>",'',s3)[0]
     return s4
 
-import md5
-
 def download_pic(pic):
     class DownloadThread(threading.Thread):
         def __init__(self, p):
@@ -55,21 +73,18 @@ def download_pic(pic):
             global tmp_path,book
             # img_path = os.path.join(tmp_path, 'Images', pic.split('/')[-1].split('?')[0])
             # if '.' in img_path[-4:-2]:
-            md5er = md5.new()
-            md5er.update(pic)
-            img_path = os.path.join(tmp_path, 'Images', md5er.hexdigest() + '.jpg')
+            img_path = os.path.join(tmp_path, 'Images', md5_hash(pic) + '.jpg')
             
             if os.path.isfile(img_path):
                 return
             url = self.pic
             try:
-
                 r = requests.get(url, headers=image_headers,timeout=30,verify=False)
             except:
-                print url + ' load error'
+                print(url + ' load error')
                 return
             if r.status_code != 200:
-                print pic.split('/')[-1] + 'Error ' + str(r.status_code)
+                print(pic.split('/')[-1] + 'Error ' + str(r.status_code))
                 return
             # if len(r.content) < 100:
             #   print pic.split('/')[-1] + 'Size Too Small!'
@@ -77,22 +92,22 @@ def download_pic(pic):
             with open(img_path, 'wb') as f:
                 f.write(r.content)
             # print 'get ' + url
-            print url + ' downloaded'
+            print(url + ' downloaded')
             im = Image.open(img_path)
             w, h = im.size
-            if len(im.split()) == 4:
-                print 'png detected'
-            elif h > 1920 :
-                im.thumbnail((w * h // 1920, 1920))
-                im.save(img_path,'jpeg')
-                print url + ' resized'
+            # if len(im.split()) == 4:
+            #     print 'png detected'
+            # elif h > 1920 :
+            #     im.thumbnail((w * h // 1920, 1920))
+            #     im.save(img_path,'jpeg')
+            #     print url + ' resized'
 
             # im.save(img_path,'jpeg')
 
-            if 900 > w > h and book.coverimg == md5er.hexdigest() + '.jpg':
-                print 'Error cover ' + book.coverimg
+            if 900 > w > h and book.coverimg == md5_hash(pic) + '.jpg':
+                print('Error cover ' + book.coverimg)
                 book.coverimg = Imgs[1]
-                print 'New cover ' + book.coverimg
+                print('New cover ' + book.coverimg)
 
 
     t = DownloadThread(pic)
@@ -113,8 +128,7 @@ def extract_pic(s):
             else:
                 pic = 'http://www.lightnovel.cn/' + pic
     except Exception:
-        print 'picture extract error'
-        print s
+        print('picture extract error\t' + s)
         return ''
 
     download_pic(pic)
@@ -122,9 +136,7 @@ def extract_pic(s):
 
     # 懒得提取 URL 里面的图片名字，直接 md5 了
 
-    md5er = md5.new()
-    md5er.update(pic)
-    image_name = md5er.hexdigest() + '.jpg'
+    image_name = md5_hash(pic) + '.jpg'
     Imgs.append(image_name)
 
     # 第一个图当封面
@@ -159,12 +171,14 @@ def epub(soup):
         os.chdir(book.title)
         os.mkdir('Text')
         os.mkdir('Images')
-
-    tmp_path = os.getcwdu()
+    if sys.version < '3':
+        tmp_path = os.getcwdu()
+    else:
+        tmp_path = os.getcwd()
 
     # print book.title
     if '繁' in book.title:
-        print 'triditional chinese detected'
+        print('triditional chinese detected')
         isTCH = True
 
     # 提取所有帖子的用户
@@ -186,7 +200,7 @@ def epub(soup):
     # 帖子内容
     contents = soup.find_all("td", {"class": "t_f"})
     raw_contents = [None] * len(contents)
-    for i in xrange(chapter_count):
+    for i in range(chapter_count):
 
         # pattl 是附件部分，有的作者会把图片放这里
         cp = contents[i].parent.parent.parent
@@ -220,15 +234,15 @@ def epub(soup):
             try:
                 raw_contents[i] = cc.convert(raw_contents[i])
             except Exception as e:
-                with open('error.log','a') as o:
-                    o.write(raw_contents[i])
+                with open('error.log','ab') as o:
+                    o.write(raw_contents[i].encode('utf-8'))
         book.Chapters.append(
             Chapter(i, str(i), 'chapter' + str(i) + '.html', (remove_edit_mark(raw_contents[i]))))
 
         # 生成页面
         t_chapter = env.get_template('Chapter.html')
-        f = open(os.path.join('Text', book.Chapters[i].filename), 'w')
-        f.write(t_chapter.render(chapter=book.Chapters[i]))
+        f = open(os.path.join('Text', book.Chapters[i].filename), 'wb')
+        f.write(t_chapter.render(chapter=book.Chapters[i]).encode('utf-8'))
         f.close()
         Texts.append(book.Chapters[i].filename)
 
@@ -239,30 +253,30 @@ def epub(soup):
     # toc.ncx
     t_toc = env.get_template('toc.ncx')
 
-    f = open('toc.ncx', 'w')
-    f.write(t_toc.render(book=book))
+    f = open('toc.ncx', 'wb')
+    f.write(t_toc.render(book=book).encode('utf-8'))
     f.close()
     # content.opf
 
     t_content = env.get_template('content.opf')
-    f = open('content.opf', 'w')
-    f.write(t_content.render(book=book, Texts=Texts, Imgs=Imgs))
+    f = open('content.opf', 'wb')
+    f.write(t_content.render(book=book, Texts=Texts, Imgs=Imgs).encode('utf-8'))
     f.close()
 
     # contents.html
     t_contents = env.get_template('Contents.html')
-    f = open(os.path.join('Text', 'Contents.html'), 'w')
-    f.write(t_contents.render(chapters=book.Chapters))
+    f = open(os.path.join('Text', 'Contents.html'), 'wb')
+    f.write(t_contents.render(chapters=book.Chapters).encode('utf-8'))
     f.close()
 
     t_cover = env.get_template('Cover.html')
-    f = open(os.path.join('Text', 'Cover.html'), 'w')
-    f.write(t_cover.render(coverpic=book.coverimg))
+    f = open(os.path.join('Text', 'Cover.html'), 'wb')
+    f.write(t_cover.render(coverpic=book.coverimg).encode('utf-8'))
     f.close()
 
     t_title = env.get_template('Title.html')
-    with open(os.path.join('Text', 'Title.html'), 'w') as f:
-        f.write(t_title.render(book_name=book.title))
+    with open(os.path.join('Text', 'Title.html'), 'wb') as f:
+        f.write(t_title.render(book_name=book.title).encode('utf-8'))
 
 
 
@@ -274,10 +288,16 @@ def epub(soup):
                 compress_type=zipfile.ZIP_STORED)
         z.write(os.path.join(basepath, 'files' + os.sep + 'style.css'), '/OEBPS/Styles/style.css',
                 compress_type=zipfile.ZIP_STORED)
-        for dir_path, dir_names, filenames in os.walk(os.getcwdu()):
-            for filename in filenames:
-                f = os.path.join(dir_path, filename)
-                z.write(f, 'OEBPS//' + f[len(os.getcwdu()) + 1:])
+        if sys.version < '3':
+            for dir_path, dir_names, filenames in os.walk(os.getcwdu()):
+                for filename in filenames:
+                    f = os.path.join(dir_path, filename)
+                    z.write(f, 'OEBPS//' + f[len(os.getcwdu()) + 1:])
+        else:
+            for dir_path, dir_names, filenames in os.walk(os.getcwd()):
+                for filename in filenames:
+                    f = os.path.join(dir_path, filename)
+                    z.write(f, 'OEBPS//' + f[len(os.getcwd()) + 1:])
     # shutil.copy(book.title + '.epub', '../')
     os.chdir('../')
     # shutil.rmtree(os.path.join(basepath, 'tmp'))
@@ -315,13 +335,14 @@ image_headers = {
 if __name__ == '__main__':
 #读取 cookie 以加载图片
     if not os.path.isfile('LK.cookie'):
-        print 'Cookie is needed for login'
+        print('Cookie is needed for login')
         exit(1)
     with open('LK.cookie') as cookie_file:
         headers['cookie'] = cookie_file.readline()[:-1]
 
-    reload(sys)
-    sys.setdefaultencoding('utf8')
+    if sys.version < '3':
+        reload(sys)
+        sys.setdefaultencoding('utf8')
 
     thread_url = raw_input('Input post url').strip()
     if len(thread_url) < 5:
@@ -330,7 +351,7 @@ if __name__ == '__main__':
     headers['referer'] = thread_url
     r = requests.get(thread_url, headers=headers,verify=False)
     if r.status_code != 200:
-        print 'NET ERROR ' + str(r.status_code)
+        print('NET ERROR ' + str(r.status_code))
         exit(1)
     text = r.text
 
@@ -339,7 +360,7 @@ if __name__ == '__main__':
         thread_p2 = thread_url[0:-8] + "2" + thread_url[-7:]
         r2 = requests.get(thread_p2, headers=headers,verify=False)
         if r2.status_code != 200:
-            print 'NET ERROR ' + str(r2.status_code) + thread_p2
+            print('NET ERROR ' + str(r2.status_code) + thread_p2)
         else:
             text += r2.text
 # 开始处理
@@ -347,10 +368,13 @@ if __name__ == '__main__':
     try:
         epub(soup)
     except Exception as e:
-        open("res.html","w").write(r.text)
+        if sys.version < '3':
+            open("res.html","w").write(r.text)
+        else:
+            open("res.html","w",encoding='utf-8').write(r.text)
         raise
     else:
         pass
     finally:
         pass
-    print 'Done!'
+    print('Done!')
