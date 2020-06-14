@@ -95,14 +95,14 @@ def download_pic(pic):
             print(url + ' downloaded')
             im = Image.open(img_path)
             w, h = im.size
-            # if len(im.split()) == 4:
-            #     print 'png detected'
-            # elif h > 1920 :
-            #     im.thumbnail((w * h // 1920, 1920))
-            #     im.save(img_path,'jpeg')
-            #     print url + ' resized'
+            if len(im.split()) == 4:
+                print('png detected')
+            elif h > 4096 :
+                im.thumbnail((w * h // 4096, 4096))
+                im.save(img_path,'jpeg')
+                print(url + ' resized')
 
-            # im.save(img_path,'jpeg')
+            im.save(img_path,'jpeg')
 
             if 900 > w > h and book.coverimg == md5_hash(pic) + '.jpg':
                 print('Error cover ' + book.coverimg)
