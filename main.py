@@ -121,14 +121,20 @@ def extract_pic(s):
     global book
     try:
         # 处理URL
-        pic = s.get('file')
+
+        tag = 'file'
+
+        pic = s.get(tag)
+        if pic is None or len(pic) < 5:
+            tag = 'src'
+            pic = s.get(tag)
         if not pic.startswith('http'):
             if headers['referer'].startswith('https'):
                 pic = 'https://www.lightnovel.cn/' + pic
             else:
                 pic = 'http://www.lightnovel.cn/' + pic
     except Exception:
-        print('picture extract error\t' + s)
+        print('picture extract error\t' + str(s))
         return ''
 
     download_pic(pic)
@@ -143,29 +149,26 @@ def extract_pic(s):
     if book.coverimg is None:
         book.coverimg = image_name
 
+    s[tag] = '../Images/' + image_name
+    s['class'] = 'duokan-image-single center'
     # 返回重命名后的文件名用在电子书里面
     return image_name
 
 
 def epub(soup):
     global tmp_path, book, threads, isTCH
-    basepath = os.getcwd() + os.sep + 'epub'
+    basepath = os.getcwd() + os.sep + 'template'
 
     def filename_escape(s):
         return re.subn(r'[/\\:\*\?\"<>\|\.]', '', s, 0)[0]
 
     book = Book()
     # 书名为标题，去除特殊字符
-    book.title = filename_escape(soup.find(id="thread_subject").string)
+    book.title = filename_escape(soup.find(attrs={"class","article-title text-hide-2"}).string)
 
-        # 准备目录
+    # 准备目录
     if os.path.isdir(book.title):
-        c = raw_input('tmp dir exists, continue?(N) Y|N').strip()
-        if c != 'Y' and c != 'y':
-            raw_input('Please delete tmp dir before retry')
-            exit(1)
-        else:
-            os.chdir(book.title)
+        os.chdir(book.title)
     else:
         os.mkdir(book.title)
         os.chdir(book.title)
@@ -181,53 +184,16 @@ def epub(soup):
         print('triditional chinese detected')
         isTCH = True
 
-    # 提取所有帖子的用户
-    reps = soup.find_all("a", {"class": "xw1"})
-    chapter_count = 0
-    i0 = reps[0]
 
-    # 判断是否为 LZ，只提取LZ发布的
-    for i in reps:
-        if i.parent['class'][0] == u'authi':
-            if i0 != i:
-                break
-            else:
-                chapter_count += 1
-
-    print(str(chapter_count) + ' chapters')
-    book.chapter_count = chapter_count
-
+    raw_contents = []
     # 帖子内容
-    contents = soup.find_all("td", {"class": "t_f"})
-    raw_contents = [None] * len(contents)
-    for i in range(chapter_count):
-
-        # pattl 是附件部分，有的作者会把图片放这里
-        cp = contents[i].parent.parent.parent
-        pattl = None
-        if cp['class'][0] == u't_fsz':
-            patts = cp.find_all(class_ = "pattl")
-            if len(patts) > 0:
-                pattl = patts[0]
-
+    contents = soup.find_all(attrs={"class": "article-content"})
+    book.chapter_count = len(contents)
+    for i in xrange(book.chapter_count):
         # 将帖子图片替换成电子书格式
         for ig in contents[i].find_all("img"):
-            new_tag = soup.new_tag('div')
-            new_tag.attrs['class'] = 'duokan-image-single center'
-            new_tag.append(soup.new_tag(
-                'img', src='../Images/' + extract_pic(ig)))
-            ig.replace_with(new_tag)
-        raw_contents[i] = str(contents[i])
-
-        # 增加 pattl 附件内容
-        if pattl:
-            for ig in pattl.find_all("img"):
-                new_tag = soup.new_tag('div')
-                new_tag.attrs['class'] = 'duokan-image-single center'
-                new_tag.append(soup.new_tag(
-                    'img', src='../Images/' + extract_pic(ig)))
-                ig.replace_with(new_tag)
-            raw_contents[i] += str(pattl)
+            extract_pic(ig)
+        raw_contents.append(str(contents[i]))
 
         if isTCH:
             # print raw_contents[i]
@@ -237,14 +203,14 @@ def epub(soup):
                 with open('error.log','ab') as o:
                     o.write(raw_contents[i].encode('utf-8'))
         book.Chapters.append(
-            Chapter(i, str(i), 'chapter' + str(i) + '.html', (remove_edit_mark(raw_contents[i]))))
+            Chapter(i, 'Chapter' + str(i), 'chapter' + str(i) + '.html', ((raw_contents[i]))))
 
-        # 生成页面
-        t_chapter = env.get_template('Chapter.html')
-        f = open(os.path.join('Text', book.Chapters[i].filename), 'wb')
-        f.write(t_chapter.render(chapter=book.Chapters[i]).encode('utf-8'))
-        f.close()
-        Texts.append(book.Chapters[i].filename)
+    # 生成页面
+    t_chapter = env.get_template('Chapter.html')
+    f = open(os.path.join('Text', book.Chapters[0].filename), 'wb')
+    f.write(t_chapter.render(chapter=book.Chapters[0]).encode('utf-8'))
+    f.close()
+    Texts.append(book.Chapters[0].filename)
 
     # 等待图片下载
     for i in threads:
@@ -298,13 +264,11 @@ def epub(soup):
                 for filename in filenames:
                     f = os.path.join(dir_path, filename)
                     z.write(f, 'OEBPS//' + f[len(os.getcwd()) + 1:])
-    # shutil.copy(book.title + '.epub', '../')
     os.chdir('../')
-    # shutil.rmtree(os.path.join(basepath, 'tmp'))
     if os.path.isdir(book.title):
         shutil.rmtree(book.title)
 
-env = Environment(loader=PackageLoader('epub', 'templates'))
+env = Environment(loader=PackageLoader('template', 'templates'))
 Texts = []
 Imgs = []
 book = Book()
@@ -345,9 +309,6 @@ if __name__ == '__main__':
         sys.setdefaultencoding('utf8')
 
     thread_url = raw_input('Input post url').strip()
-    if len(thread_url) < 5:
-# 如果需要下载多页帖子，需要这种格式方便换页
-        thread_url = 'http://www.lightnovel.cn/thread-861998-1-1.html'
     headers['referer'] = thread_url
     r = requests.get(thread_url, headers=headers,verify=False)
     if r.status_code != 200:
@@ -355,15 +316,6 @@ if __name__ == '__main__':
         exit(1)
     text = r.text
 
-# 换页，这里只做两页，应该够了
-    if thread_url[-8] == "1":
-        thread_p2 = thread_url[0:-8] + "2" + thread_url[-7:]
-        r2 = requests.get(thread_p2, headers=headers,verify=False)
-        if r2.status_code != 200:
-            print('NET ERROR ' + str(r2.status_code) + thread_p2)
-        else:
-            text += r2.text
-# 开始处理
     soup = BeautifulSoup(text, "html.parser")
     try:
         epub(soup)
@@ -377,4 +329,3 @@ if __name__ == '__main__':
         pass
     finally:
         pass
-    print('Done!')
