@@ -13,7 +13,8 @@ from jinja2 import Environment, PackageLoader
 from PIL import Image
 import opencc
 import hashlib
-
+from PIL import ImageFile
+ImageFile.LOAD_TRUNCATED_IMAGES = True
 
 cc = opencc.OpenCC('t2s')
 
