@@ -95,10 +95,12 @@ def download_pic(pic):
             # print 'get ' + url
             print(url + ' downloaded')
             im = Image.open(img_path)
+
+            im = im.convert("RGB")
             w, h = im.size
-            if len(im.split()) == 4:
-                print('png detected')
-            elif h > 4096 :
+            # if len(im.split()) == 4:
+            #     print('png detected')
+            if h > 4096 :
                 im.thumbnail((w * h // 4096, 4096))
                 im.save(img_path,'jpeg')
                 print(url + ' resized')
