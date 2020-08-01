@@ -165,7 +165,7 @@ def epub(soup):
 
     book = Book()
     # 书名为标题，去除特殊字符
-    book.title = filename_escape(soup.find(attrs={"class","article-title text-hide-2"}).string)
+    book.title = filename_escape(soup.find(attrs={"class","article-title"}).string)
 
     # 准备目录
     if os.path.isdir(book.title):
@@ -278,13 +278,15 @@ tmp_path = ''
 
 headers = {
     'dnt': '1',
-    'accept-encoding': 'gzip, deflate, sdch',
-    'user-agent': ("Mozilla/5.0 (Windows NT 6.1; Win64; x64)"
-                   " AppleWebKit/537.36 (KHTML, like Gecko)"
-                   " Chrome/48.0.2564.109 Safari/537.36"),
-    'accept': ("text/html,application/xhtml+xml,application/xml;q=0.9"
-               ",image/webp,*/*;q=0.8"),
-    'cookie': ''
+    'accept-encoding': 'gzip, deflate, br',
+    'user-agent': ("Mozilla/5.0 (Windows NT 10.0; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/84.0.4147.105 Safari/537.36"),
+    'accept': ("text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.9"),
+    'accept-language': 'zh-CN,zh;q=0.9,en;q=0.8,zh-TW;q=0.7,en-US;q=0.6',
+    'sec-fetch-dest': 'document',
+    'sec-fetch-mode': 'navigate',
+    'sec-fetch-site': 'same-origin',
+    'sec-fetch-user': '?1',
+    'upgrade-insecure-requests':'1',
 }
 
 image_headers = {
@@ -299,26 +301,25 @@ image_headers = {
 
 if __name__ == '__main__':
 #读取 cookie 以加载图片
-    if not os.path.isfile('LK.cookie'):
-        print('Cookie is needed for login')
-        exit(1)
-    with open('LK.cookie') as cookie_file:
-        headers['cookie'] = cookie_file.readline()[:-1]
+    # if not os.path.isfile('LK.cookie'):
+    #     print('Cookie is needed for login')
+    #     exit(1)
+    # with open('LK.cookie') as cookie_file:
+    #     headers['cookie'] = cookie_file.readline()[:-1]
 
     if sys.version < '3':
         reload(sys)
         sys.setdefaultencoding('utf8')
 
     thread_url = raw_input('Input post url').strip()
-    headers['referer'] = thread_url
+    headers['referer'] = 'https://www.lightnovel.us/'
     r = requests.get(thread_url, headers=headers,verify=False)
-    if r.status_code != 200:
-        print('NET ERROR ' + str(r.status_code))
-        exit(1)
     text = r.text
-
-    soup = BeautifulSoup(text, "html.parser")
     try:
+        if r.status_code != 200:
+            raise Exception('NET ERROR ' + str(r.status_code))
+
+        soup = BeautifulSoup(text, "html.parser")
         epub(soup)
     except Exception as e:
         if sys.version < '3':
