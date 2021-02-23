@@ -192,7 +192,7 @@ def epub(soup):
     # 帖子内容
     contents = soup.find_all(attrs={"class": "article-content"})
     book.chapter_count = len(contents)
-    for i in xrange(book.chapter_count):
+    for i in range(book.chapter_count):
         # 将帖子图片替换成电子书格式
         for ig in contents[i].find_all("img"):
             extract_pic(ig)
@@ -313,21 +313,25 @@ if __name__ == '__main__':
         reload(sys)
         sys.setdefaultencoding('utf8')
 
-    thread_url = raw_input('Input post url').strip()
+    thread_url = raw_input('Input post url\n').strip()
     headers['referer'] = 'https://www.lightnovel.us/'
-    r = requests.get(thread_url, headers=headers,verify=False)
-    text = r.text
-    try:
+    if thread_url.startswith('http'):
+        r = requests.get(thread_url, headers=headers,verify=False)
         if r.status_code != 200:
             raise Exception('NET ERROR ' + str(r.status_code))
 
+        text = r.text
+    else:
+        with open(thread_url, 'r', encoding="utf-8") as read_file:
+            text = '\n'.join(read_file.readlines())
+    try:
         soup = BeautifulSoup(text, "html.parser")
         epub(soup)
     except Exception as e:
         if sys.version < '3':
-            open("res.html","w").write(r.text)
+            open("res.html","w").write(text)
         else:
-            open("res.html","w",encoding='utf-8').write(r.text)
+            open("res.html","w",encoding='utf-8').write(text)
         raise
     else:
         pass
