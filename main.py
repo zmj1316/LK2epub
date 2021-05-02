@@ -315,6 +315,7 @@ if __name__ == '__main__':
 
     thread_url = raw_input('Input post url\n').strip()
     headers['referer'] = 'https://www.lightnovel.us/'
+    image_headers['referer'] = 'https://www.lightnovel.us/'
     if thread_url.startswith('http'):
         r = requests.get(thread_url, headers=headers,verify=False)
         if r.status_code != 200:
